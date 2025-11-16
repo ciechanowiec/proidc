@@ -1,0 +1,47 @@
+services:
+  proidc:
+    build:
+      dockerfile: Dockerfile
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-9090}
+      SERVER_SESSION_TIMEOUT: ${SERVER_SESSION_TIMEOUT:-60m}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_SCOPE: ${GOOGLE_SCOPE:-openid,profile,email}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-{baseUrl}/login/oauth2/code/{registrationId}}
+      UPSTREAM_APP_URI: ${UPSTREAM_APP_URI:-http://localhost:8080}
+      UPSTREAM_APP_LOGOUT_URI: ${UPSTREAM_APP_LOGOUT_URI:-http://localhost:8080/api/logout}
+      ID_TOKEN_HEADER_NAME: ${ID_TOKEN_HEADER_NAME:-X-ID-Token}
+      LOGGING_LEVEL: ${LOGGING_LEVEL:-INFO}
+      LOGIN_PAGE: ${LOGIN_PAGE:-classpath:static/login.html}
+      EXPECTED_HOSTED_DOMAIN_REGEX: ${EXPECTED_HOSTED_DOMAIN_REGEX:-.*}
+      HEADERS_TO_REMOVE: ${HEADERS_TO_REMOVE:-Authorization,XSRF-TOKEN}
+      COOKIES_TO_REMOVE: ${COOKIES_TO_REMOVE:-sling.formauth,sling.sudo,XSRF-TOKEN}
+      PATHS_TO_BLOCK_PATTERNS: ${PATHS_TO_BLOCK_PATTERNS:-/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**}
+    image: ciechanowiec/proidc:1.0.0
+    container_name: proidc
+    volumes:
+      - type: volume
+        source: proidc-data
+        target: /var/logs/proidc
+    # exec is required in order to set the Java process as PID 1 inside the container, since Docker sends
+    # termination signals only to PID 1, and we need those signals to be handled by the java process:
+    entrypoint: [ "sh", "-c", "exec ./starter.sh" ]
+    stop_grace_period: 300s
+    hostname: proidc
+    networks:
+      - proidc-network
+    ports:
+      - target: ${SERVER_PORT:-9090}
+        published: ${SERVER_PORT:-9090}
+        protocol: tcp
+        mode: host
+
+volumes:
+  proidc-data:
+    name: proidc-data
+
+networks:
+  proidc-network:
+    name: proidc-network
+    driver: bridge

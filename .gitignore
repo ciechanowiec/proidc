@@ -1,0 +1,16 @@
+*.class
+*.iml
+*.log*
+*.logs*
+logs
+log
+.idea
+.vscode
+target
+node_modules
+.DS_Store
+*.bkp
+.env
+# Compiled documentation:
+README.html
+README.pdf

@@ -1,0 +1,70 @@
+server:
+  port: ${SERVER_PORT:9090}
+  reactive:
+    session:
+      timeout: ${SERVER_SESSION_TIMEOUT:60m}
+
+spring:
+  main:
+    banner-mode: "off"
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            provider: google
+            client-id: "${GOOGLE_CLIENT_ID}"
+            client-secret: "${GOOGLE_CLIENT_SECRET}"
+            scope: "${GOOGLE_SCOPE:openid,profile,email}"
+            redirect-uri: "${GOOGLE_REDIRECT_URI:{baseUrl}/login/oauth2/code/{registrationId}}"
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: upstream-app-route
+              uri: ${UPSTREAM_APP_URI:http://localhost:8080}
+              predicates:
+                - Path=/**
+
+logging:
+  level:
+    root: "${LOGGING_LEVEL:INFO}"
+  pattern:
+    dateformat: yyyy-MM-dd HH:mm:ss.SSS O
+  file:
+    name: /var/logs/proidc/application.log
+  logback:
+    rollingpolicy:
+      # Will roll the log file every day and add name it like 'application.log-2023-02-03_21-49.0'
+      # (docs: https://logback.qos.ch/manual/appenders.html):
+      file-name-pattern: ${LOG_FILE}-%d{yyyy-MM-dd}.%i
+      max-history: 30
+      max-file-size: 10MB
+      # No total size cap:
+      total-size-cap: 0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Enable all actuator endpoints over HTTP:
+        # include: "*"
+        # Disable all actuator endpoints over HTTP:
+        exclude: "*"
+      # Repeat the default base path for clarity:
+      base-path: /actuator
+
+proidc:
+  id_token:
+    header_name: ${ID_TOKEN_HEADER_NAME:X-ID-Token}
+  login_page: ${LOGIN_PAGE:classpath:static/login.html}
+  upstream_logout_uri: ${UPSTREAM_APP_LOGOUT_URI:http://localhost:8080/api/logout}
+  expected_hosted_domain:
+    regex: ${EXPECTED_HOSTED_DOMAIN_REGEX:.*}
+  headers_to_remove: ${HEADERS_TO_REMOVE:Authorization,X-XSRF-TOKEN}
+  cookies_to_remove: ${COOKIES_TO_REMOVE:sling.formauth,sling.sudo,XSRF-TOKEN}
+  paths_to_block:
+    patterns: ${PATHS_TO_BLOCK_PATTERNS:/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**}
