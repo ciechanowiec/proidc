@@ -17,7 +17,8 @@
     <packaging>jar</packaging>
 
     <name>PROIDC</name>
-    <description>Simple Google OIDC-based security gateway in front of an SR Instance of the Sling Rocket Framework</description>
+    <description>Simple Google OIDC-based security gateway in front of an SR Instance of the Sling Rocket Framework
+    </description>
     <url>${url}</url>
     <inceptionYear>2025</inceptionYear>
 
@@ -566,6 +567,13 @@
                 <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>${maven-gpg-plugin.version}</version>
                         <executions>
@@ -585,6 +593,7 @@
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
                         <version>${central-publishing-maven-plugin.version}</version>
+                        <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
                             <autoPublish>true</autoPublish>
