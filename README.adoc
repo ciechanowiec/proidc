@@ -322,7 +322,7 @@ _PROIDC_ is based on a https://docs.spring.io/spring-cloud-gateway/reference/[Sp
 |
 |Value for the https://docs.spring.io/spring-security/reference/servlet/oauth2/login/core.html[`spring.security.oauth2.client.registration.google.client-id` property].
 
-| `GOOGLE_CLIENT_SECRET`
+|`GOOGLE_CLIENT_SECRET`
 |
 |Value for the https://docs.spring.io/spring-security/reference/servlet/oauth2/login/core.html[`spring.security.oauth2.client.registration.google.client-secret` property].
 
