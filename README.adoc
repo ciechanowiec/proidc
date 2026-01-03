@@ -432,7 +432,7 @@ To block all requests that are targeting a path that starts with some specific s
 This application is designed to be run as a Docker container. A `docker-compose.yml` file is provided in the repository to serve as a template for running the application.
 
 === Image
-The application image, `ciechanowiec/proidc:1.0.0`, is available on Docker Hub. Alternatively, you can build it from the source using the provided `Dockerfile`.
+The application image, `ciechanowiec/proidc:1.1.0`, is available on Docker Hub. Alternatively, you can build it from the source using the provided `Dockerfile`.
 
 === Configuration
 The application is configured via environment variables. For a complete list of available properties, please refer to the xref:#configuration[Configuration section] and the `docker-compose.yml` template.

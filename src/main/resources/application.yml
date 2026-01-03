@@ -3,6 +3,8 @@ server:
   reactive:
     session:
       timeout: ${SERVER_SESSION_TIMEOUT:60m}
+      cookie:
+        secure: true
 
 spring:
   main:
