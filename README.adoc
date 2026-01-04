@@ -134,7 +134,7 @@ xref:#oidc-authentication[`<SESSION_COOKIE>`], xref:#csrf-protection[`<XSRF_TOKE
 < X-XSS-Protection: 0
 < Referrer-Policy: no-referrer
 < set-cookie: XSRF-TOKEN=; Max-Age=0; Expires=Tue, 23 Sep 2025 20:52:36 GMT; Path=/; HTTPOnly
-< set-cookie: SESSION=d7417235-db1e-47b0-80a7-0ee50edc9e10; Path=/; HTTPOnly; SameSite=Lax
+< set-cookie: SESSION=d7417235-db1e-47b0-80a7-0ee50edc9e10; Path=/; Secure; HTTPOnly; SameSite=Lax
 < content-length: 0
 ----
 
