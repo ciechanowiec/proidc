@@ -22,7 +22,7 @@
 _PROIDC_ is a simple Google https://openid.net/specs/openid-connect-core-1_0.html[OIDC-based^] security gateway in front of https://github.com/ciechanowiec/sling_rocket[an SR Instance of the _Sling Rocket_ Framework] ("*upstream application*"). It has the following capabilities:
 [upperalpha]
 . xref:#login-page[].
-. xref:#oidc-authentication-and-token-relay[]
+. xref:#oidc-authentication-and-token-relay[].
 . xref:#oidc-logouts[].
 . xref:#csrf-protection[].
 
@@ -335,16 +335,16 @@ _PROIDC_ is based on a https://docs.spring.io/spring-cloud-gateway/reference/[Sp
 |Value for the https://docs.spring.io/spring-security/reference/servlet/oauth2/login/core.html[`spring.security.oauth2.client.registration.google.redirect-uri` property].
 
 |`UPSTREAM_APP_URI`
-|`http://localhost:8080`
+|`http://rocket-instance:8080`
 |URI of the upstream application defined in the https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/configuration.html[`spring.cloud.gateway.server.webflux.routes.uri` property].
 
 |[#upstream-app-logout-uri]#`UPSTREAM_APP_LOGOUT_URI`#
-|`http://localhost:8080/api/logout`
+|`http://rocket-instance:8080/api/logout`
 |URI of the upstream application where xref:#upstream-logout-request[OIDC logout requests are sent].
 
 |[#id-token-header-name]#`ID_TOKEN_HEADER_NAME`#
 |`X-ID-Token`
-|The name of the HTTP header used to pass the ID Token to the upstream service.
+|The name of the HTTP header used to pass the ID Token to the upstream application.
 
 |`LOGGING_LEVEL`
 |`INFO`
@@ -352,7 +352,7 @@ _PROIDC_ is based on a https://docs.spring.io/spring-cloud-gateway/reference/[Sp
 
 |`LOGIN_PAGE`
 |`classpath:static/login.html`
-|See the xref:#login-page[] section.
+|See xref:#login-page[] for details.
 
 |`HEADERS_TO_REMOVE`
 |`Authorization,X-XSRF-TOKEN`
@@ -391,6 +391,10 @@ The default value is `.*`, which matches any value, including an empty string, t
 |`++/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**++`
 |See xref:#paths-to-block-patterns[] for details.
 
+|`PATHS_TO_EXCLUDE_PATTERNS`
+|
+|See xref:#paths-to-exclude-patterns[] for details.
+
 |===
 
 [[paths-to-block-patterns]]
@@ -426,13 +430,22 @@ To block all requests that are targeting a path that starts with some specific s
 ... https://github.com/apache/sling-org-apache-sling-auth-core/blob/60a1f92939b1f29ace8266560c0acdce7ee229db/src/main/java/org/apache/sling/auth/core/impl/LogoutServlet.java#L74[`/system/sling/logout*/**`]
 ... https://sling.apache.org/documentation/bundles/managing-users-and-groups-jackrabbit-usermanager.html[`/system/userManager*/**`]
 
+[[paths-to-exclude-patterns]]
+=== `PATHS_TO_EXCLUDE_PATTERNS`
+[upperalpha]
+. The `PATHS_TO_EXCLUDE_PATTERNS` configuration property determines which https://en.wikipedia.org/wiki/URL#Syntax[URL paths] should be excluded from authentication requirements. Requests to these paths will be allowed without authentication.
+. The value of the configuration property should be a comma-separated list of path patterns to be excluded. Every specified path pattern must be a valid https://docs.spring.io/spring-framework/docs/5.0.0.M4_to_5.0.0.M5/Spring%20Framework%205.0.0.M5/org/springframework/web/util/patterns/PathPattern.html[`PathPattern`].
++
+To exclude all requests that are targeting a path that starts with some specific string, it is recommended to use syntax `++/<starting-string>*/**++`. For instance, for the paths starting with `/public/api`, the syntax should be `++/public*/api/**++`..
+. By default this property is empty, meaning that all paths (except `/login`) require authentication.
+
 [[docker-setup]]
 == Docker
 
 This application is designed to be run as a Docker container. A `docker-compose.yml` file is provided in the repository to serve as a template for running the application.
 
 === Image
-The application image, `ciechanowiec/proidc:1.1.0`, is available on Docker Hub. Alternatively, you can build it from the source using the provided `Dockerfile`.
+The application image, `ciechanowiec/proidc:1.2.0`, is available on Docker Hub. Alternatively, you can build it from the source using the provided `Dockerfile`.
 
 === Configuration
 The application is configured via environment variables. For a complete list of available properties, please refer to the xref:#configuration[Configuration section] and the `docker-compose.yml` template.

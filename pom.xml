@@ -13,7 +13,7 @@
 
     <groupId>eu.ciechanowiec</groupId>
     <artifactId>proidc</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <packaging>jar</packaging>
 
     <name>PROIDC</name>
@@ -68,11 +68,11 @@
         <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
         <!-- Plugins -->
         <min.maven.version>3.8.6</min.maven.version>
-        <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+        <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
         <versions-maven-plugin.version>2.18.0</versions-maven-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
-        <spotbugs-maven-plugin.version>4.9.8.1</spotbugs-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.9.8.2</spotbugs-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
         <jacoco-maven-plugin.coverage.minimum>0.8</jacoco-maven-plugin.coverage.minimum>
         <maven-dependency-plugin.version>3.9.0</maven-dependency-plugin.version>

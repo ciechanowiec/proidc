@@ -9,8 +9,8 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_SCOPE: ${GOOGLE_SCOPE:-openid,profile,email}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-{baseUrl}/login/oauth2/code/{registrationId}}
-      UPSTREAM_APP_URI: ${UPSTREAM_APP_URI:-http://localhost:8080}
-      UPSTREAM_APP_LOGOUT_URI: ${UPSTREAM_APP_LOGOUT_URI:-http://localhost:8080/api/logout}
+      UPSTREAM_APP_URI: ${UPSTREAM_APP_URI:-http://rocket-instance:8080}
+      UPSTREAM_APP_LOGOUT_URI: ${UPSTREAM_APP_LOGOUT_URI:-http://rocket-instance:8080/api/logout}
       ID_TOKEN_HEADER_NAME: ${ID_TOKEN_HEADER_NAME:-X-ID-Token}
       LOGGING_LEVEL: ${LOGGING_LEVEL:-INFO}
       LOGIN_PAGE: ${LOGIN_PAGE:-classpath:static/login.html}
@@ -18,7 +18,8 @@ services:
       HEADERS_TO_REMOVE: ${HEADERS_TO_REMOVE:-Authorization,XSRF-TOKEN}
       COOKIES_TO_REMOVE: ${COOKIES_TO_REMOVE:-sling.formauth,sling.sudo,XSRF-TOKEN}
       PATHS_TO_BLOCK_PATTERNS: ${PATHS_TO_BLOCK_PATTERNS:-/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**}
-    image: ciechanowiec/proidc:1.1.0
+      PATHS_TO_EXCLUDE_PATTERNS: ${PATHS_TO_EXCLUDE_PATTERNS:-}
+    image: ciechanowiec/proidc:1.2.0
     container_name: proidc
     volumes:
       - type: volume

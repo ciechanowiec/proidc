@@ -39,7 +39,8 @@ class SecurityConfigOidcUserServiceTest {
                 "http://upstream/logout",
                 "X-ID-Token",
                 "example\\.com", // regex for allowed hd
-                List.of() // no blocked paths needed for this test
+                List.of(), // no blocked paths needed for this test
+                List.of()
         );
 
         ReactiveOAuth2UserService<OidcUserRequest, OidcUser> service = config.oidcUserService();
@@ -67,6 +68,7 @@ class SecurityConfigOidcUserServiceTest {
                 "http://upstream/logout",
                 "X-ID-Token",
                 "example\\.com", // only example.com allowed
+                Collections.emptyList(),
                 Collections.emptyList()
         );
 

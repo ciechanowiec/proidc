@@ -1,5 +1,6 @@
 package eu.ciechanowiec.proidc;
 
+import lombok.SneakyThrows;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -26,7 +27,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockOidcLogin;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "MultipleStringLiterals", "PMD.AvoidDuplicateLiterals"})
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
@@ -131,8 +132,8 @@ class GatewayConfigTest {
     void sessionCookieShouldBeRemovedAndOtherCookiesPreserved() throws InterruptedException {
         // Given
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
-        String otherCookieName = "other-cookie";
-        String otherCookieValue = "other-value";
+        String otherCookieName = "test-cookie";
+        String otherCookieValue = "test-value";
 
         // When
         webTestClient.mutateWith(mockOidcLogin())
@@ -147,7 +148,8 @@ class GatewayConfigTest {
         // Then
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
         String cookieHeader = recordedRequest.getHeaders().get("Cookie");
-        assertThat(cookieHeader).isNotNull()
+        assertThat(cookieHeader)
+                .isNotNull()
                 .contains(String.format("%s=%s", otherCookieName, otherCookieValue))
                 .doesNotContain(sessionCookieName);
     }
@@ -203,19 +205,67 @@ class GatewayConfigTest {
                 );
     }
 
-    @SuppressWarnings({"TestMethodWithoutAssertion", "PMD.UnitTestShouldIncludeAssert"})
     @Test
     void unauthenticatedRequestShouldNotHaveIdTokenHeader() {
         // Given
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
-
+        int requestCountBefore = mockWebServer.getRequestCount();
         // When - Note: No mockOidcLogin() here
         webTestClient.get()
                 .uri("/api/test")
                 .exchange()
                 .expectStatus()
-                .is3xxRedirection(); // Redirects to login
+                .is3xxRedirection(); // Redirects to /login
+        // Then
+        // Verify that the request did not reach the upstream server
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(requestCountBefore);
+    }
 
-        // No need to check the request as it won't reach the upstream server
+    @SneakyThrows
+    @Test
+    void removeLocationHeader() {
+        // Given
+        String loginPath = "/system/sling/form/login";
+        mockWebServer.enqueue(
+                new MockResponse()
+                        .setBody("OK")
+                        .addHeader("Location", loginPath)
+        );
+
+        // When
+        webTestClient.mutateWith(mockOidcLogin())
+                .get()
+                .uri("/api/test")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectHeader().doesNotExist("Location");
+
+        // Then
+        // Verify that a request was made to the upstream server
+        assertThat(mockWebServer.takeRequest()).isNotNull();
+    }
+
+    @SneakyThrows
+    @Test
+    @SuppressWarnings({"TestMethodWithoutAssertion", "PMD.UnitTestShouldIncludeAssert"})
+    void preserveLocationHeader() {
+        // Given
+        String otherPath = "/some/other/path";
+        mockWebServer.enqueue(
+                new MockResponse()
+                        .setBody("OK")
+                        .addHeader("Location", otherPath)
+        );
+
+        // When
+        webTestClient.mutateWith(mockOidcLogin())
+                .get()
+                .uri("/api/test")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals("Location", otherPath);
+
+        // Then
+        mockWebServer.takeRequest();
     }
 }

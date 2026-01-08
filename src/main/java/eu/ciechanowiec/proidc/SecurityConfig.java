@@ -49,27 +49,33 @@ public class SecurityConfig {
     private final String idTokenHeaderName;
     private final String regexForExpectedHD;
     private final Collection<String> patternsOfPathsToBlock;
+    private final Collection<String> patternsOfPathsToExclude;
 
     /**
      * Constructs a new instance of {@link SecurityConfig} with the specified configuration parameters.
      *
-     * @param upstreamLogoutUrl      the URL of the upstream server's logout endpoint
-     * @param idTokenHeaderName      the name of the header to use when sending the
-     *                               {@link OidcIdToken}
-     *                               to the upstream server
-     * @param regexForExpectedHD     a regular expression {@link Pattern} that valid hosted domain values must match
-     * @param patternsOfPathsToBlock a {@link Collection} of path patterns that should be blocked from access
+     * @param upstreamLogoutUrl        the URL of the upstream server's logout endpoint
+     * @param idTokenHeaderName        the name of the header to use when sending the
+     *                                 {@link OidcIdToken}
+     *                                 to the upstream server
+     * @param regexForExpectedHD       a regular expression {@link Pattern} that valid hosted domain values must match
+     * @param patternsOfPathsToBlock   a {@link Collection} of path patterns that should be blocked from access
+     * @param patternsOfPathsToExclude a {@link Collection} of path patterns that should be excluded from
+     *                                 authentication requirements
      */
+    @SuppressWarnings({"ParameterNumber", "ConstructorWithTooManyParameters", "PMD.ExcessiveParameterList"})
     SecurityConfig(
             @Value("${proidc.upstream_logout_uri}") String upstreamLogoutUrl,
             @Value("${proidc.id_token.header_name}") String idTokenHeaderName,
             @Value("${proidc.expected_hosted_domain.regex}") String regexForExpectedHD,
-            @Value("${proidc.paths_to_block.patterns}") Collection<String> patternsOfPathsToBlock
+            @Value("${proidc.paths_to_block.patterns}") Collection<String> patternsOfPathsToBlock,
+            @Value("${proidc.paths_to_exclude.patterns:}") Collection<String> patternsOfPathsToExclude
     ) {
         this.upstreamLogoutUrl = upstreamLogoutUrl;
         this.idTokenHeaderName = idTokenHeaderName;
         this.regexForExpectedHD = regexForExpectedHD;
         this.patternsOfPathsToBlock = Collections.unmodifiableCollection(patternsOfPathsToBlock);
+        this.patternsOfPathsToExclude = Collections.unmodifiableCollection(patternsOfPathsToExclude);
         log.info("Initialized {}", this);
     }
 
@@ -139,14 +145,24 @@ public class SecurityConfig {
             ServerHttpSecurity http, ServerLogoutSuccessHandler logoutSuccessHandler
     ) {
         http.authorizeExchange(
-                        exchange ->
-                                exchange.pathMatchers("/login")
-                                        .permitAll()
-                                        .anyExchange()
-                                        .authenticated()
-                ).oauth2Login(oauth2 -> oauth2.loginPage("/login"))
-                .logout(logout -> logout.logoutSuccessHandler(logoutSuccessHandler))
-                .csrf(csrf -> csrf.csrfTokenRepository(new CookieServerCsrfTokenRepository()));
+                exchange -> {
+                    // Always permit access to login page
+                    exchange.pathMatchers("/login").permitAll();
+
+                    // Permit access to excluded paths if any are configured
+                    if (!patternsOfPathsToExclude.isEmpty()) {
+                        exchange.pathMatchers(patternsOfPathsToExclude.toArray(String[]::new)).permitAll();
+                    }
+
+                    // Require authentication for all other paths
+                    exchange.anyExchange().authenticated();
+                }
+        );
+
+        http.oauth2Login(oauth2 -> oauth2.loginPage("/login"));
+        http.logout(logout -> logout.logoutSuccessHandler(logoutSuccessHandler));
+        http.csrf(csrf -> csrf.csrfTokenRepository(new CookieServerCsrfTokenRepository()));
+
         return http.build();
     }
 

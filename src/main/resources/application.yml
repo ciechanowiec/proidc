@@ -27,7 +27,7 @@ spring:
         webflux:
           routes:
             - id: upstream-app-route
-              uri: ${UPSTREAM_APP_URI:http://localhost:8080}
+              uri: ${UPSTREAM_APP_URI:http://rocket-instance:8080}
               predicates:
                 - Path=/**
 
@@ -63,10 +63,12 @@ proidc:
   id_token:
     header_name: ${ID_TOKEN_HEADER_NAME:X-ID-Token}
   login_page: ${LOGIN_PAGE:classpath:static/login.html}
-  upstream_logout_uri: ${UPSTREAM_APP_LOGOUT_URI:http://localhost:8080/api/logout}
+  upstream_logout_uri: ${UPSTREAM_APP_LOGOUT_URI:http://rocket-instance:8080/api/logout}
   expected_hosted_domain:
     regex: ${EXPECTED_HOSTED_DOMAIN_REGEX:.*}
   headers_to_remove: ${HEADERS_TO_REMOVE:Authorization,X-XSRF-TOKEN}
   cookies_to_remove: ${COOKIES_TO_REMOVE:sling.formauth,sling.sudo,XSRF-TOKEN}
   paths_to_block:
     patterns: ${PATHS_TO_BLOCK_PATTERNS:/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**}
+  paths_to_exclude:
+    patterns: ${PATHS_TO_EXCLUDE_PATTERNS:}

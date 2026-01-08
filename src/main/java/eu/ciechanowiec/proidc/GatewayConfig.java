@@ -7,10 +7,13 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -57,6 +60,7 @@ public class GatewayConfig {
      * @return a {@link GlobalFilter} that processes requests before they are forwarded
      */
     @Bean
+    @SuppressWarnings({"MethodLength", "LambdaBodyLength", "PMD.LooseCoupling"})
     public GlobalFilter requestRelayFilter() {
         log.trace("{} started execution", this);
         return (exchange, chain) -> {
@@ -64,6 +68,7 @@ public class GatewayConfig {
             ServerHttpRequest requestCleaned = removeSensitiveHeadersAndCookies(
                     requestOriginal
             );
+
             return exchange.getPrincipal()
                     .ofType(OAuth2AuthenticationToken.class)
                     .map(OAuth2AuthenticationToken::getPrincipal)
@@ -79,7 +84,30 @@ public class GatewayConfig {
                                 return exchange.mutate().request(requestCleanedButWithIdToken).build();
                             }
                     ).defaultIfEmpty(exchange.mutate().request(requestCleaned).build())
-                    .flatMap(chain::filter)
+                    .doOnSuccess(
+                            finalExchange -> finalExchange.getResponse().beforeCommit(
+                                    () -> {
+                                        ServerHttpResponse response = finalExchange.getResponse();
+                                        HttpHeaders headers = response.getHeaders();
+                                        Optional.ofNullable(headers.get(HttpHeaders.LOCATION))
+                                                .stream()
+                                                .flatMap(Collection::stream)
+                                                .filter(location -> location.startsWith("/system/sling/form/login"))
+                                                .findAny()
+                                                .ifPresent(
+                                                        location -> {
+                                                            log.trace(
+                                                                    "Removing location header with value: '{}'",
+                                                                    location
+                                                            );
+                                                            headers.remove(HttpHeaders.LOCATION);
+                                                            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+                                                        }
+                                                );
+                                        return Mono.empty();
+                                    }
+                            )
+                    ).flatMap(chain::filter)
                     .doOnSuccess(voidObject -> log.trace("{} finished execution", this));
         };
     }
