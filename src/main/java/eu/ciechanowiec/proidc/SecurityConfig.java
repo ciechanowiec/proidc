@@ -24,6 +24,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.ServerRedirectStrategy;
 import org.springframework.security.web.server.authentication.logout.ServerLogoutSuccessHandler;
 import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -43,6 +44,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @Configuration
 @ToString
+@SuppressWarnings("ClassFanOutComplexity")
 public class SecurityConfig {
 
     private final String upstreamLogoutUrl;
@@ -146,24 +148,60 @@ public class SecurityConfig {
     ) {
         http.authorizeExchange(
                 exchange -> {
-                    // Always permit access to login page
                     exchange.pathMatchers("/login").permitAll();
-
-                    // Permit access to excluded paths if any are configured
                     if (!patternsOfPathsToExclude.isEmpty()) {
                         exchange.pathMatchers(patternsOfPathsToExclude.toArray(String[]::new)).permitAll();
                     }
-
-                    // Require authentication for all other paths
                     exchange.anyExchange().authenticated();
                 }
         );
 
         http.oauth2Login(oauth2 -> oauth2.loginPage("/login"));
         http.logout(logout -> logout.logoutSuccessHandler(logoutSuccessHandler));
-        http.csrf(csrf -> csrf.csrfTokenRepository(new CookieServerCsrfTokenRepository()));
 
+        http.csrf(
+                csrf -> {
+                    csrf.csrfTokenRepository(new CookieServerCsrfTokenRepository());
+                    if (!patternsOfPathsToExclude.isEmpty()) {
+                        csrf.requireCsrfProtectionMatcher(createCsrfMatcher());
+                    }
+                }
+        );
         return http.build();
+    }
+
+    /**
+     * Creates a matcher that requires CSRF protection ONLY if:
+     * 1. The path is NOT in the excluded list
+     * 2. AND the method is a state-changing method (POST, PUT, DELETE, etc.)
+     */
+    @SuppressWarnings({"ReturnCount", "PMD.CognitiveComplexity"})
+    private ServerWebExchangeMatcher createCsrfMatcher() {
+        return exchange -> ServerWebExchangeMatchers.pathMatchers(patternsOfPathsToExclude.toArray(String[]::new))
+                .matches(exchange)
+                .flatMap(
+                        excludedPathResult -> {
+                            // 1. If the path IS excluded, we return 'notMatch', meaning CSRF protection is SKIPPED.
+                            if (excludedPathResult.isMatch()) {
+                                return ServerWebExchangeMatcher.MatchResult.notMatch();
+                            }
+
+                            // 2. If the path is NOT excluded, we apply standard CSRF logic:
+                            // Skip CSRF for "safe" methods (GET, HEAD, OPTIONS, TRACE)
+                            HttpMethod method = exchange.getRequest().getMethod();
+                            if (
+                                    method.equals(HttpMethod.GET)
+                                            || method.equals(HttpMethod.HEAD)
+                                            || method.equals(HttpMethod.OPTIONS)
+                                            || method.equals(HttpMethod.TRACE)
+                            ) {
+                                return ServerWebExchangeMatcher.MatchResult.notMatch();
+                            }
+
+                            // 3. For all other requests (POST/PUT/DELETE on non-excluded paths), CSRF is REQUIRED.
+                            return ServerWebExchangeMatcher.MatchResult.match();
+                        }
+                );
     }
 
     /**

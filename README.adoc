@@ -433,7 +433,7 @@ To block all requests that are targeting a path that starts with some specific s
 [[paths-to-exclude-patterns]]
 === `PATHS_TO_EXCLUDE_PATTERNS`
 [upperalpha]
-. The `PATHS_TO_EXCLUDE_PATTERNS` configuration property determines which https://en.wikipedia.org/wiki/URL#Syntax[URL paths] should be excluded from authentication requirements. Requests to these paths will be allowed without authentication.
+. The `PATHS_TO_EXCLUDE_PATTERNS` configuration property determines which https://en.wikipedia.org/wiki/URL#Syntax[URL paths] should be excluded from xref:#oidc-authentication[OIDC authentication] and xref:#csrf-protection[CSRF protection] requirements. Requests to these paths will be allowed without authentication and CSRF token validation.
 . The value of the configuration property should be a comma-separated list of path patterns to be excluded. Every specified path pattern must be a valid https://docs.spring.io/spring-framework/docs/5.0.0.M4_to_5.0.0.M5/Spring%20Framework%205.0.0.M5/org/springframework/web/util/patterns/PathPattern.html[`PathPattern`].
 +
 To exclude all requests that are targeting a path that starts with some specific string, it is recommended to use syntax `++/<starting-string>*/**++`. For instance, for the paths starting with `/public/api`, the syntax should be `++/public*/api/**++`..
