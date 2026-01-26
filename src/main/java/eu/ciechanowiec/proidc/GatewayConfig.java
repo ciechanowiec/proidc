@@ -8,11 +8,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.server.PathContainer;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.web.util.pattern.PathPattern;
+import org.springframework.web.util.pattern.PathPatternParser;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
@@ -30,20 +33,27 @@ public class GatewayConfig {
     private final String idTokenHeaderName;
     private final Set<String> allHeadersToRemoveLowerCase;
     private final Set<String> allCookiesToRemoveLowerCase;
+    private final Collection<PathPattern> patternsOfPathsToExclude;
 
     /**
      * Constructs a new instance of this class.
      *
-     * @param idTokenHeaderName the name of the header to use when forwarding the ID token
-     * @param sessionCookieName the name of the session cookie, which will be removed from forwarded requests
-     * @param headersToRemove   a collection of header names that should be removed from forwarded requests
-     * @param cookiesToRemove   a collection of cookie names that should be removed from forwarded requests
+     * @param idTokenHeaderName        the name of the header to use when forwarding the ID token
+     * @param sessionCookieName        the name of the session cookie, which will be removed from forwarded requests
+     * @param headersToRemove          a {@link Collection} of header names that should be
+     *                                 removed from forwarded requests
+     * @param cookiesToRemove          a {@link Collection} of cookie names that should be
+     *                                 removed from forwarded requests
+     * @param patternsOfPathsToExclude a {@link Collection} of path patterns that should be excluded from
+     *                                 authentication requirements
      */
+    @SuppressWarnings({"ParameterNumber", "PMD.ExcessiveParameterList"})
     public GatewayConfig(
             @Value("${proidc.id_token.header_name}") String idTokenHeaderName,
             @Value("${server.reactive.session.cookie.name:SESSION}") String sessionCookieName,
             @Value("${proidc.headers_to_remove}") Collection<String> headersToRemove,
-            @Value("${proidc.cookies_to_remove}") Collection<String> cookiesToRemove
+            @Value("${proidc.cookies_to_remove}") Collection<String> cookiesToRemove,
+            @Value("${proidc.paths_to_exclude.patterns:}") Collection<String> patternsOfPathsToExclude
     ) {
         this.idTokenHeaderName = idTokenHeaderName;
         this.allHeadersToRemoveLowerCase = Stream.concat(headersToRemove.stream(), Stream.of(idTokenHeaderName))
@@ -52,6 +62,10 @@ public class GatewayConfig {
         this.allCookiesToRemoveLowerCase = Stream.concat(cookiesToRemove.stream(), Stream.of(sessionCookieName))
                 .map(cookieToRemove -> cookieToRemove.toLowerCase(Locale.getDefault()))
                 .collect(Collectors.toUnmodifiableSet());
+        PathPatternParser parser = new PathPatternParser();
+        this.patternsOfPathsToExclude = patternsOfPathsToExclude.stream()
+                .map(parser::parse)
+                .toList();
     }
 
     /**
@@ -68,6 +82,15 @@ public class GatewayConfig {
             ServerHttpRequest requestCleaned = removeSensitiveHeadersAndCookies(
                     requestOriginal
             );
+
+            PathContainer actualRequestPath = requestOriginal.getPath().pathWithinApplication();
+            boolean isExcludedFromAuthReqs = patternsOfPathsToExclude.stream()
+                    .anyMatch(pattern -> pattern.matches(actualRequestPath));
+
+            if (isExcludedFromAuthReqs) {
+                log.trace("Request path '{}' is excluded from auth reqs, not relaying ID Token", actualRequestPath);
+                return chain.filter(exchange.mutate().request(requestCleaned).build());
+            }
 
             return exchange.getPrincipal()
                     .ofType(OAuth2AuthenticationToken.class)

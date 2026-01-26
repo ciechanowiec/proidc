@@ -27,13 +27,14 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockOidcLogin;
 
-@SuppressWarnings({"unused", "MultipleStringLiterals", "PMD.AvoidDuplicateLiterals"})
+@SuppressWarnings({"unused", "MultipleStringLiterals", "PMD.AvoidDuplicateLiterals", "MagicNumber"})
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
                 "spring.cloud.gateway.server.webflux.routes[0].id=test-service",
                 "spring.cloud.gateway.server.webflux.routes[0].uri=http://localhost:${test.server.port}",
-                "spring.cloud.gateway.server.webflux.routes[0].predicates[0]=Path=/api/**"
+                "spring.cloud.gateway.server.webflux.routes[0].predicates[0]=Path=/**",
+                "proidc.paths_to_exclude.patterns=/public*/**"
         }
 )
 @AutoConfigureWebTestClient
@@ -78,6 +79,31 @@ class GatewayConfigTest {
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add("test.server.port", mockWebServer::getPort);
+    }
+
+    @Test
+    void idTokenShouldNotBeRelayedForExcludedPaths() throws InterruptedException {
+        // Given
+        String tokenValue = "test-id-token";
+        mockWebServer.enqueue(new MockResponse().setBody("OK"));
+
+        OidcIdToken idToken = new OidcIdToken(
+                tokenValue, Instant.now(), Instant.now().plusSeconds(60), Map.of("sub", "user")
+        );
+        OidcUser oidcUser = new DefaultOidcUser(Collections.emptyList(), idToken);
+
+        // When
+        webTestClient.mutateWith(mockOidcLogin().oidcUser(oidcUser))
+                .get()
+                .uri("/public/test")
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        // Then
+        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        String relayedToken = recordedRequest.getHeaders().get(idTokenHeader);
+        assertThat(relayedToken).isNull();
     }
 
     @SuppressWarnings("MagicNumber")
