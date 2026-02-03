@@ -14,6 +14,7 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
 import reactor.core.publisher.Mono;
@@ -74,7 +75,7 @@ public class GatewayConfig {
      * @return a {@link GlobalFilter} that processes requests before they are forwarded
      */
     @Bean
-    @SuppressWarnings({"MethodLength", "LambdaBodyLength", "PMD.LooseCoupling"})
+    @SuppressWarnings({"MethodLength", "LambdaBodyLength"})
     public GlobalFilter requestRelayFilter() {
         log.trace("{} started execution", this);
         return (exchange, chain) -> {
@@ -89,7 +90,9 @@ public class GatewayConfig {
 
             if (isExcludedFromAuthReqs) {
                 log.trace("Request path '{}' is excluded from auth reqs, not relaying ID Token", actualRequestPath);
-                return chain.filter(exchange.mutate().request(requestCleaned).build());
+                ServerWebExchange mutatedExchange = exchange.mutate().request(requestCleaned).build();
+                addSlingLoginRedirectInterceptor(mutatedExchange);
+                return chain.filter(mutatedExchange);
             }
 
             return exchange.getPrincipal()
@@ -107,32 +110,36 @@ public class GatewayConfig {
                                 return exchange.mutate().request(requestCleanedButWithIdToken).build();
                             }
                     ).defaultIfEmpty(exchange.mutate().request(requestCleaned).build())
-                    .doOnSuccess(
-                            finalExchange -> finalExchange.getResponse().beforeCommit(
-                                    () -> {
-                                        ServerHttpResponse response = finalExchange.getResponse();
-                                        HttpHeaders headers = response.getHeaders();
-                                        Optional.ofNullable(headers.get(HttpHeaders.LOCATION))
-                                                .stream()
-                                                .flatMap(Collection::stream)
-                                                .filter(location -> location.startsWith("/system/sling/form/login"))
-                                                .findAny()
-                                                .ifPresent(
-                                                        location -> {
-                                                            log.trace(
-                                                                    "Removing location header with value: '{}'",
-                                                                    location
-                                                            );
-                                                            headers.remove(HttpHeaders.LOCATION);
-                                                            response.setStatusCode(HttpStatus.UNAUTHORIZED);
-                                                        }
-                                                );
-                                        return Mono.empty();
-                                    }
-                            )
-                    ).flatMap(chain::filter)
+                    .doOnSuccess(this::addSlingLoginRedirectInterceptor)
+                    .flatMap(chain::filter)
                     .doOnSuccess(voidObject -> log.trace("{} finished execution", this));
         };
+    }
+
+    @SuppressWarnings("PMD.LooseCoupling")
+    private void addSlingLoginRedirectInterceptor(ServerWebExchange exchange) {
+        exchange.getResponse().beforeCommit(
+                () -> {
+                    ServerHttpResponse response = exchange.getResponse();
+                    HttpHeaders headers = response.getHeaders();
+                    Optional.ofNullable(headers.get(HttpHeaders.LOCATION))
+                            .stream()
+                            .flatMap(Collection::stream)
+                            .filter(location -> location.startsWith("/system/sling/form/login"))
+                            .findAny()
+                            .ifPresent(
+                                    location -> {
+                                        log.trace(
+                                                "Removing location header with value: '{}'",
+                                                location
+                                        );
+                                        headers.remove(HttpHeaders.LOCATION);
+                                        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+                                    }
+                            );
+                    return Mono.empty();
+                }
+        );
     }
 
     /**
