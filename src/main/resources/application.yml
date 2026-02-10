@@ -5,6 +5,7 @@ server:
       timeout: ${SERVER_SESSION_TIMEOUT:60m}
       cookie:
         secure: true
+        max-age: ${SERVER_SESSION_COOKIE_MAX_AGE:3600s}
 
 spring:
   main:

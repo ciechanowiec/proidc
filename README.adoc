@@ -318,6 +318,10 @@ _PROIDC_ is based on a https://docs.spring.io/spring-cloud-gateway/reference/[Sp
 |`60m`
 |Value for the https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.server.server.reactive.session.timeout[`server.reactive.session.timeout` property].
 
+|`SERVER_SESSION_COOKIE_MAX_AGE`
+|`3600s`
+|Value for the https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.server.server.reactive.session.cookie.max-age[`server.reactive.session.cookie.max-age` property].
+
 |`GOOGLE_CLIENT_ID`
 |
 |Value for the https://docs.spring.io/spring-security/reference/servlet/oauth2/login/core.html[`spring.security.oauth2.client.registration.google.client-id` property].
@@ -445,7 +449,7 @@ To exclude all requests that are targeting a path that starts with some specific
 This application is designed to be run as a Docker container. A `docker-compose.yml` file is provided in the repository to serve as a template for running the application.
 
 === Image
-The application image, `ciechanowiec/proidc:1.2.0`, is available on Docker Hub. Alternatively, you can build it from the source using the provided `Dockerfile`.
+The application image, `ciechanowiec/proidc:1.3.0`, is available on Docker Hub. Alternatively, you can build it from the source using the provided `Dockerfile`.
 
 === Configuration
 The application is configured via environment variables. For a complete list of available properties, please refer to the xref:#configuration[Configuration section] and the `docker-compose.yml` template.

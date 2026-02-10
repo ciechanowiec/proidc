@@ -263,8 +263,8 @@ class GatewayConfigTest {
                 .get()
                 .uri("/api/test")
                 .exchange()
-                .expectStatus().isUnauthorized()
-                .expectHeader().doesNotExist("Location");
+                .expectStatus().isFound()
+                .expectHeader().location("/login");
 
         // Then
         // Verify that a request was made to the upstream server

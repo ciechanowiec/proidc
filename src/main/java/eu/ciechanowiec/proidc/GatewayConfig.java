@@ -134,7 +134,8 @@ public class GatewayConfig {
                                                 location
                                         );
                                         headers.remove(HttpHeaders.LOCATION);
-                                        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+                                        headers.set(HttpHeaders.LOCATION, "/login");
+                                        response.setStatusCode(HttpStatus.FOUND);
                                     }
                             );
                     return Mono.empty();
