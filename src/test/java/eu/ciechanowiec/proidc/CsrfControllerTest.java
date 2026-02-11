@@ -9,6 +9,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import java.time.Duration;
 import java.util.Map;
 
 @SuppressWarnings("TestMethodWithoutAssertion")
@@ -22,12 +23,14 @@ class CsrfControllerTest {
 
     @Test
     @WithMockUser
-    @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
+    @SuppressWarnings({"PMD.UnitTestShouldIncludeAssert", "MagicNumber"})
     void shouldReturnCsrfToken() {
         webTestClient.get()
                 .uri("/csrf")
                 .exchange()
                 .expectStatus().isOk()
+                .expectCookie().exists("XSRF-TOKEN")
+                .expectCookie().maxAge("XSRF-TOKEN", Duration.ofSeconds(3600))
                 .expectBody()
                 .jsonPath("$.token").exists()
                 .jsonPath("$.headerName").exists()

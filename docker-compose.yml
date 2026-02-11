@@ -20,7 +20,7 @@ services:
       COOKIES_TO_REMOVE: ${COOKIES_TO_REMOVE:-sling.formauth,sling.sudo,XSRF-TOKEN}
       PATHS_TO_BLOCK_PATTERNS: ${PATHS_TO_BLOCK_PATTERNS:-/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**}
       PATHS_TO_EXCLUDE_PATTERNS: ${PATHS_TO_EXCLUDE_PATTERNS:-}
-    image: ciechanowiec/proidc:1.3.0
+    image: ciechanowiec/proidc:1.4.0
     container_name: proidc
     volumes:
       - type: volume
