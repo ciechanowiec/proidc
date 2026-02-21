@@ -13,7 +13,7 @@
 
     <groupId>eu.ciechanowiec</groupId>
     <artifactId>proidc</artifactId>
-    <version>1.4.0</version>
+    <version>1.5.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>PROIDC</name>
@@ -57,7 +57,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!--  Building properties  -->
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <fail-build-on-static-code-analysis-errors>true</fail-build-on-static-code-analysis-errors>
         <enforce-tests-coverage>true</enforce-tests-coverage>
         <!--  Dependencies  -->

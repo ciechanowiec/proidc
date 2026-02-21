@@ -67,6 +67,7 @@ public class GatewayConfig {
         this.patternsOfPathsToExclude = patternsOfPathsToExclude.stream()
                 .map(parser::parse)
                 .toList();
+        log.info("Initialized {}", this);
     }
 
     /**
@@ -77,9 +78,10 @@ public class GatewayConfig {
     @Bean
     @SuppressWarnings({"MethodLength", "LambdaBodyLength"})
     public GlobalFilter requestRelayFilter() {
-        log.trace("{} started execution", this);
         return (exchange, chain) -> {
             ServerHttpRequest requestOriginal = exchange.getRequest();
+            String requestPath = requestOriginal.getPath().pathWithinApplication().value();
+            log.trace("{} started execution for '{}'", this, requestPath);
             ServerHttpRequest requestCleaned = removeSensitiveHeadersAndCookies(
                     requestOriginal
             );
@@ -150,6 +152,7 @@ public class GatewayConfig {
      * @return a new {@link ServerHttpRequest} with sensitive headers and cookies removed
      */
     private ServerHttpRequest removeSensitiveHeadersAndCookies(ServerHttpRequest requestToBeCleaned) {
+        String requestPath = requestToBeCleaned.getPath().pathWithinApplication().value();
         return requestToBeCleaned.mutate().headers(
                 headers -> {
                     List<String> actualHeaderNamesToRemove = headers.keySet()
@@ -159,7 +162,14 @@ public class GatewayConfig {
                                         String actualHeaderNameLoweCase = actualHeaderName.toLowerCase(
                                                 Locale.getDefault()
                                         );
-                                        return allHeadersToRemoveLowerCase.contains(actualHeaderNameLoweCase);
+                                        boolean shouldDrop = allHeadersToRemoveLowerCase.contains(
+                                                actualHeaderNameLoweCase
+                                        );
+                                        log.trace(
+                                                "Should header '{}' be dropped for request path '{}'? Answer: {}",
+                                                actualHeaderNameLoweCase, requestPath, shouldDrop
+                                        );
+                                        return shouldDrop;
                                     }
                             ).toList();
                     actualHeaderNamesToRemove.forEach(headers::remove);
@@ -182,13 +192,19 @@ public class GatewayConfig {
      * or an empty {@link Optional} if there are no cookies left
      */
     private Optional<String> cookieHeaderWithoutSensitiveCookies(ServerHttpRequest requestToBeCleaned) {
+        String requestPath = requestToBeCleaned.getPath().pathWithinApplication().value();
         return Optional.of(
                 requestToBeCleaned.getCookies().values().stream()
                         .flatMap(List::stream)
                         .filter(
                                 cookie -> {
                                     String cookieNameLowerCase = cookie.getName().toLowerCase(Locale.getDefault());
-                                    return !allCookiesToRemoveLowerCase.contains(cookieNameLowerCase);
+                                    boolean shouldKeep = !allCookiesToRemoveLowerCase.contains(cookieNameLowerCase);
+                                    log.trace(
+                                            "Should cookie '{}' be kept for request path '{}'? Answer: {}",
+                                            cookieNameLowerCase, requestPath, shouldKeep
+                                    );
+                                    return shouldKeep;
                                 }
                         ).map(cookie -> "%s=%s".formatted(cookie.getName(), cookie.getValue()))
                         .collect(Collectors.joining("; "))
