@@ -151,6 +151,7 @@ class SecurityConfigTest {
                     "X-ID-Token",
                     ".*",
                     Collections.emptyList(),
+                    Collections.emptyList(),
                     List.of("/public/**")
             );
         }

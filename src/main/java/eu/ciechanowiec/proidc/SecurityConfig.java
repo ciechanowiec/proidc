@@ -27,6 +27,7 @@ import org.springframework.security.web.server.csrf.CookieServerCsrfTokenReposit
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.pattern.PathPattern;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
@@ -34,6 +35,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,12 +46,13 @@ import java.util.regex.Pattern;
 @Slf4j
 @Configuration
 @ToString
-@SuppressWarnings("ClassFanOutComplexity")
+@SuppressWarnings({"ClassFanOutComplexity", "PMD.CognitiveComplexity"})
 public class SecurityConfig {
 
     private final String upstreamLogoutUrl;
     private final String idTokenHeaderName;
     private final String regexForExpectedHD;
+    private final Set<String> stringsInPathsToBlock;
     private final Collection<String> patternsOfPathsToBlock;
     private final Collection<String> patternsOfPathsToExclude;
 
@@ -61,8 +64,10 @@ public class SecurityConfig {
      *                                 {@link OidcIdToken}
      *                                 to the upstream server
      * @param regexForExpectedHD       a regular expression {@link Pattern} that valid hosted domain values must match
-     * @param patternsOfPathsToBlock   a {@link Collection} of path patterns that should be blocked from access
-     * @param patternsOfPathsToExclude a {@link Collection} of path patterns that should be excluded from
+     * @param stringsInPathsToBlock    a {@link Collection} of {@link String}s that, if found in a path, should
+     *                                 cause the path to be blocked from access
+     * @param patternsOfPathsToBlock   a {@link Collection} of {@link PathPattern} that should be blocked from access
+     * @param patternsOfPathsToExclude a {@link Collection} of {@link PathPattern} that should be excluded from
      *                                 authentication requirements
      */
     @SuppressWarnings({"ParameterNumber", "ConstructorWithTooManyParameters", "PMD.ExcessiveParameterList"})
@@ -70,12 +75,14 @@ public class SecurityConfig {
             @Value("${proidc.upstream_logout_uri}") String upstreamLogoutUrl,
             @Value("${proidc.id_token.header_name}") String idTokenHeaderName,
             @Value("${proidc.expected_hosted_domain.regex}") String regexForExpectedHD,
+            @Value("${proidc.strings_in_paths_to_block}") Collection<String> stringsInPathsToBlock,
             @Value("${proidc.paths_to_block.patterns}") Collection<String> patternsOfPathsToBlock,
             @Value("${proidc.paths_to_exclude.patterns:}") Collection<String> patternsOfPathsToExclude
     ) {
         this.upstreamLogoutUrl = upstreamLogoutUrl;
         this.idTokenHeaderName = idTokenHeaderName;
         this.regexForExpectedHD = regexForExpectedHD;
+        this.stringsInPathsToBlock = Set.copyOf(stringsInPathsToBlock);
         this.patternsOfPathsToBlock = Collections.unmodifiableCollection(patternsOfPathsToBlock);
         this.patternsOfPathsToExclude = Collections.unmodifiableCollection(patternsOfPathsToExclude);
         log.info("Initialized {}", this);
@@ -92,18 +99,31 @@ public class SecurityConfig {
     public SecurityWebFilterChain restrictedPathsDenyFilterChain(ServerHttpSecurity http) {
         ServerRedirectStrategy redirectStrategy = new DefaultServerRedirectStrategy();
         URI redirectUri = URI.create("/");
-        return http
-                .securityMatcher(ServerWebExchangeMatchers.pathMatchers(patternsOfPathsToBlock.toArray(String[]::new)))
+        ServerWebExchangeMatcher blockedStringsMatcher = exchange -> {
+            String path = exchange.getRequest().getURI().getPath();
+            return stringsInPathsToBlock.contains(path)
+                    ? ServerWebExchangeMatcher.MatchResult.match()
+                    : ServerWebExchangeMatcher.MatchResult.notMatch();
+        };
+        ServerWebExchangeMatcher pathMatcher = ServerWebExchangeMatchers.pathMatchers(
+                patternsOfPathsToBlock.toArray(String[]::new)
+        );
+        ServerWebExchangeMatcher combinedMatcher = exchange -> pathMatcher.matches(exchange)
+                .flatMap(
+                        result -> result.isMatch()
+                                ? Mono.just(result)
+                                : blockedStringsMatcher.matches(exchange)
+                );
+        return http.securityMatcher(combinedMatcher)
                 .authorizeExchange(exchange -> exchange.anyExchange().denyAll())
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(
-                                (exchange, authenticationException)
-                                        -> redirectStrategy.sendRedirect(exchange, redirectUri)
-                        )
-                        .accessDeniedHandler(
-                                (exchange, authenticationException)
-                                        -> redirectStrategy.sendRedirect(exchange, redirectUri)
-                        )
+                .exceptionHandling(
+                        exceptions -> exceptions
+                                .authenticationEntryPoint(
+                                        (exchange, _) -> redirectStrategy.sendRedirect(exchange, redirectUri)
+                                )
+                                .accessDeniedHandler(
+                                        (exchange, _) -> redirectStrategy.sendRedirect(exchange, redirectUri)
+                                )
                 )
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .build();
