@@ -33,8 +33,12 @@
         <property name="matchAcrossLines" value="true"/>
     </module>
     <module name="RegexpMultiline">
+        <property name="format" value="javax\s*\.\s*servlet"/>
+        <property name="message" value="Usage of javax.servlet package is prohibited. Use jakarta.servlet instead."/>
+    </module>
+    <module name="RegexpMultiline">
         <property name="format"
-                  value="(?s)class\s+\w+[^{]*extends\s+(?!\b(SlingAllMethodsServlet|SlingSafeMethodsServlet|HttpServlet|ResourceProvider|TestEnvironment|RuntimeException|Exception|JsonSerializer|InputStream|AnnotatedStandardMBean)\b)\w+[^{]*\{"/>
+                  value="(?s)class\s+\w+[^{]*extends\s+(?!\b(SlingJakartaAllMethodsServlet|SlingJakartaSafeMethodsServlet|HttpServlet|ResourceProvider|TestEnvironment|RuntimeException|Exception|JsonSerializer|InputStream|AnnotatedStandardMBean|TurboFilter|HttpServletRequestWrapper|HttpServletResponseWrapper)\b)\w+[^{]*\{"/>
         <property name="message"
                   value="Inheritance is allowed only for explicitly specified cases."/>
     </module>
@@ -57,6 +61,10 @@
     TreeWalker checks
     -->
     <module name="TreeWalker">
+        <!-- Java 25 compatibility: https://github.com/checkstyle/checkstyle/issues/17052#issuecomment-3925225556 -->
+        <property name="skipFileOnJavaParseException" value="true"/>
+        <property name="javaParseExceptionSeverity" value="ignore"/>
+
         <!-- Enable usage of @SuppressWarnings -->
         <module name="SuppressWarningsHolder"/>
 
@@ -137,6 +145,11 @@
                          ]"/>
             <message key="matchxpath.match"
                      value="Use constructor injection instead of field injection"/>
+        </module>
+        <module name="MatchXpath">
+            <property name="query" value="//METHOD_CALL[./DOT/IDENT[@text='orElse'] and ./ELIST/EXPR/LITERAL_NULL]"/>
+            <message key="matchxpath.match"
+                     value="Avoid using `.orElse(null)` unless this is an API contract. `orElse(null)` gives you essentially a null and makes `Optional` usage pointless. Consider using `.orElse(someDefaultValue)` or leaving it as an `Optional`"/>
         </module>
         <module name="MissingSwitchDefault"/>
         <module name="ModifiedControlVariable"/>
@@ -230,7 +243,9 @@
         <module name="CatchParameterName"/>
         <module name="ClassTypeParameterName"/>
         <module name="ConstantName"/>
-        <module name="IllegalIdentifierName"/>
+        <module name="IllegalIdentifierName">
+            <property name="format" value="^(?!var$)\S+$"/>
+        </module>
         <module name="LambdaParameterName"/>
         <module name="LocalFinalVariableName"/>
         <module name="LocalVariableName"/>
