@@ -405,7 +405,7 @@ a|
 +
 The letter case is ignored when matching the `String`++s++.
 
-. The default value of this configuration property ensures that paths with https://github.com/apache/sling-org-apache-sling-installer-provider-jcr/blob/5cd4d199a15f04d1a71533cd3c095c6077096ec5/src/main/java/org/apache/sling/installer/provider/jcr/impl/JcrInstaller.java#L102[`install` and `config` `String`s are blocked to prevent access to the `JcrInstaller`^].
+. The default value of this configuration property ensures that paths with https://github.com/apache/sling-org-apache-sling-installer-provider-jcr/blob/5cd4d199a15f04d1a71533cd3c095c6077096ec5/src/main/java/org/apache/sling/installer/provider/jcr/impl/JcrInstaller.java#L102[`install` and `config` `String`++s++ are blocked to prevent access to the `JcrInstaller`^].
 
 |`PATHS_TO_BLOCK_PATTERNS`
 |`++/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**++`
