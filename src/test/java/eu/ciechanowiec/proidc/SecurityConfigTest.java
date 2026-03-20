@@ -34,17 +34,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestPropertySource(
         properties = "proidc.paths_to_exclude.patterns=/public*/**"
 )
+@SuppressWarnings({"MultipleStringLiterals", "PMD.AvoidDuplicateLiterals"})
 class SecurityConfigTest {
 
-    @SuppressWarnings("InstanceVariableMayNotBeInitialized")
     @Autowired
     private WebTestClient webTestClient;
 
-    @SuppressWarnings({"InstanceVariableMayNotBeInitialized", "MismatchedQueryAndUpdateOfCollection"})
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     @Value("${proidc.paths_to_block.patterns}")
     private List<String> pathsToBlock;
 
-    @SuppressWarnings({"InstanceVariableMayNotBeInitialized", "MismatchedQueryAndUpdateOfCollection"})
+    @SuppressWarnings({"MismatchedQueryAndUpdateOfCollection", "unused"})
     @Value("${proidc.paths_to_exclude.patterns}")
     private List<String> pathsToExclude;
 
@@ -124,6 +124,129 @@ class SecurityConfigTest {
                 .uri(pathToTest)
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    @SuppressWarnings("PackageVisibleInnerClass")
+    @Nested
+    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+    @AutoConfigureWebTestClient
+    @TestPropertySource(
+            properties = {
+                    "proidc.strings_in_paths_to_block=INSTALL,Config",
+                    "proidc.paths_to_exclude.patterns=/public*/**"
+            }
+    )
+    class StringsInPathsToBlockTest {
+
+        @Autowired
+        private WebTestClient stringsTestClient;
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                        "/install", "/INSTALL", "/some/install/path", "/some/INSTALL/path",
+                        "/config", "/CONFIG", "/some/config/path", "/some/CONFIG/path",
+                        "/path/with/install/inside", "/path/with/config/inside", "/path/author.install/me",
+                        "/path/author.config/me", "/path/install.author", "/path/iiinstallll/m"
+                }
+        )
+        @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
+        void shouldBlockPathsContainingBlockedStrings(String path) {
+            stringsTestClient.get()
+                    .uri(path)
+                    .exchange()
+                    .expectStatus().is3xxRedirection()
+                    .expectHeader().value("Location", location ->
+                            assertThat(location).isEqualTo("/")
+                    );
+        }
+
+        @Test
+        @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
+        void shouldNotBlockPathsNotContainingBlockedStrings() {
+            // This path doesn't contain "install" or "config"
+            // It's not in the excluded list, so it should redirect to /login (standard behavior)
+            stringsTestClient.get()
+                    .uri("/allowed-path")
+                    .exchange()
+                    .expectStatus().is3xxRedirection()
+                    .expectHeader().value("Location", location ->
+                            assertThat(location).isEqualTo("/login")
+                    );
+        }
+
+        @Test
+        @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
+        void shouldBlockAuthorizedRequestToBlockedStringPath() {
+            // Authorized request should still be blocked if it contains a blocked string
+            stringsTestClient.mutateWith(SecurityMockServerConfigurers.mockUser())
+                    .get()
+                    .uri("/some/install/path")
+                    .exchange()
+                    .expectStatus().is3xxRedirection()
+                    .expectHeader().value("Location", location ->
+                            assertThat(location).isEqualTo("/")
+                    );
+        }
+
+        @Test
+        @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
+        void shouldNotBlockWhenBlockedStringIsInQueryParameter() {
+            // Blocked string in a query parameter should NOT cause blocking
+            stringsTestClient.get()
+                    .uri("/allowed-path?param=install")
+                    .exchange()
+                    .expectStatus().is3xxRedirection()
+                    .expectHeader().value("Location", location ->
+                            assertThat(location).isEqualTo("/login")
+                    );
+        }
+
+        @Test
+        @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
+        void shouldBlockPathWithMultipleBlockedStrings() {
+            stringsTestClient.get()
+                    .uri("/path/containing/INSTALL/and/Config")
+                    .exchange()
+                    .expectStatus().is3xxRedirection()
+                    .expectHeader().value("Location", location ->
+                            assertThat(location).isEqualTo("/")
+                    );
+        }
+
+        @Test
+        @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
+        void shouldBlockEvenIfPathIsExcludedInOtherFilter() {
+            // /public/resource is in patternsOfPathsToExclude (see @TestPropertySource),
+            // but if it contains a blocked string, it should still be blocked
+            // by restrictedPathsDenyFilterChain (Order(1))
+            stringsTestClient.get()
+                    .uri("/public/install/resource")
+                    .exchange()
+                    .expectStatus().is3xxRedirection()
+                    .expectHeader().value("Location", location ->
+                            assertThat(location).isEqualTo("/")
+                    );
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "/path/with/in-stall", // hyphenated
+                "/path/with/inst.all", // dotted
+                "/path/with/inst_all", // underscored
+                "/confi",              // prefix
+                "/onfig"               // suffix
+        })
+        @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
+        void shouldNotBlockPathsWithNearMatches(String path) {
+            stringsTestClient.get()
+                    .uri(path)
+                    .exchange()
+                    .expectStatus().is3xxRedirection()
+                    .expectHeader().value("Location", location ->
+                            assertThat(location).isEqualTo("/login")
+                    );
+        }
     }
 
     @SuppressWarnings({"PackageVisibleInnerClass", "unused", "EmptyClass"})

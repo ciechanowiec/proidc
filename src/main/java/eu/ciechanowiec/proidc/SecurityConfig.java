@@ -32,12 +32,10 @@ import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.net.URI;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Configuration class for {@link ServerHttpSecurity}
@@ -82,7 +80,9 @@ public class SecurityConfig {
         this.upstreamLogoutUrl = upstreamLogoutUrl;
         this.idTokenHeaderName = idTokenHeaderName;
         this.regexForExpectedHD = regexForExpectedHD;
-        this.stringsInPathsToBlock = Set.copyOf(stringsInPathsToBlock);
+        this.stringsInPathsToBlock = stringsInPathsToBlock.stream()
+                .map(stringInPathToBlock -> stringInPathToBlock.toLowerCase(Locale.getDefault()))
+                .collect(Collectors.toUnmodifiableSet());
         this.patternsOfPathsToBlock = Collections.unmodifiableCollection(patternsOfPathsToBlock);
         this.patternsOfPathsToExclude = Collections.unmodifiableCollection(patternsOfPathsToExclude);
         log.info("Initialized {}", this);
@@ -100,8 +100,10 @@ public class SecurityConfig {
         ServerRedirectStrategy redirectStrategy = new DefaultServerRedirectStrategy();
         URI redirectUri = URI.create("/");
         ServerWebExchangeMatcher blockedStringsMatcher = exchange -> {
-            String path = exchange.getRequest().getURI().getPath();
-            return stringsInPathsToBlock.contains(path)
+            String path = exchange.getRequest().getURI().getPath().toLowerCase(Locale.getDefault());
+            boolean isBlocked = stringsInPathsToBlock.stream()
+                    .anyMatch(path::contains);
+            return isBlocked
                     ? ServerWebExchangeMatcher.MatchResult.match()
                     : ServerWebExchangeMatcher.MatchResult.notMatch();
         };
