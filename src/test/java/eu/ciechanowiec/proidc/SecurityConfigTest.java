@@ -132,7 +132,7 @@ class SecurityConfigTest {
     @AutoConfigureWebTestClient
     @TestPropertySource(
             properties = {
-                    "proidc.strings_in_paths_to_block=INSTALL,Config",
+                    "proidc.strings_in_paths_to_block=INSTALL,Config,j_security_check",
                     "proidc.paths_to_exclude.patterns=/public*/**"
             }
     )
@@ -146,8 +146,10 @@ class SecurityConfigTest {
                 strings = {
                         "/install", "/INSTALL", "/some/install/path", "/some/INSTALL/path",
                         "/config", "/CONFIG", "/some/config/path", "/some/CONFIG/path",
-                        "/path/with/install/inside", "/path/with/config/inside", "/path/author.install/me",
-                        "/path/author.config/me", "/path/install.author", "/path/iiinstallll/m"
+                        "/j_security_check", "/J_SECURITY_CHECK", "/some/j_security_check/path",
+                        "/path/with/install/inside", "/path/with/config/inside", "/path/with/j_security_check/inside",
+                        "/path/author.install/me", "/path/author.config/me", "/path/author.j_security_check/me",
+                        "/path/install.author", "/path/iiinstallll/m"
                 }
         )
         @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")

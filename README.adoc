@@ -392,7 +392,7 @@ If the `hd` claim is not present in the ID Token, it is treated as an empty stri
 The default value is `.*`, which matches any value, including an empty string, thus allowing users both belonging and not belonging to some domain. To require a specific domain like `example.com`, the value should be set to `example\.com` (note that this would reject users without the `hd` claim).
 
 |`STRINGS_IN_PATHS_TO_BLOCK`
-|`install,config`
+|`install,config,j_security_check`
 a|
 [upperalpha]
 . The `STRINGS_IN_PATHS_TO_BLOCK` configuration property determines which https://en.wikipedia.org/wiki/URL#Syntax[URL paths^] must always be blocked so that no requests targeting those paths are ever proxied to the upstream application.
@@ -405,7 +405,10 @@ a|
 +
 The letter case is ignored when matching the `String`++s++.
 
-. The default value of this configuration property ensures that paths with https://github.com/apache/sling-org-apache-sling-installer-provider-jcr/blob/5cd4d199a15f04d1a71533cd3c095c6077096ec5/src/main/java/org/apache/sling/installer/provider/jcr/impl/JcrInstaller.java#L102[`install` and `config` `String`++s++ are blocked to prevent access to the `JcrInstaller`^].
+. The default value of this configuration property ensures that the following paths are blocked: +
+[upperroman]
+.. https://github.com/apache/sling-org-apache-sling-installer-provider-jcr/blob/5cd4d199a15f04d1a71533cd3c095c6077096ec5/src/main/java/org/apache/sling/installer/provider/jcr/impl/JcrInstaller.java#L102[`install` and `config` `String`++s++, to prevent access to the `JcrInstaller`^].
+.. https://sling.apache.org/documentation/the-sling-engine/authentication/authentication-authenticationhandler/form-based-authenticationhandler.html[`j_security_check` `String`, to prevent initial form submissions^].
 
 |`PATHS_TO_BLOCK_PATTERNS`
 |`++/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**++`
