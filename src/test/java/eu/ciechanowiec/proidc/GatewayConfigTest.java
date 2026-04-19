@@ -9,23 +9,31 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockOidcLogin;
 
 @SuppressWarnings({"unused", "MultipleStringLiterals", "PMD.AvoidDuplicateLiterals", "MagicNumber"})
 @SpringBootTest(
@@ -40,6 +48,7 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
 @AutoConfigureWebTestClient
 class GatewayConfigTest {
 
+    // Inject a fake security context whenever the test header "X-Mock-Oidc-Token" is sent
     @SuppressWarnings({"StaticVariableMayNotBeInitialized", "FieldNamingConvention"})
     private static MockWebServer mockWebServer;
 
@@ -83,96 +92,77 @@ class GatewayConfigTest {
 
     @Test
     void idTokenShouldNotBeRelayedForExcludedPaths() throws InterruptedException {
-        // Given
         String tokenValue = "test-id-token";
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
 
-        OidcIdToken idToken = new OidcIdToken(
-                tokenValue, Instant.now(), Instant.now().plusSeconds(60), Map.of("sub", "user")
-        );
-        OidcUser oidcUser = new DefaultOidcUser(Collections.emptyList(), idToken);
-
-        // When
-        webTestClient.mutateWith(mockOidcLogin().oidcUser(oidcUser))
-                .get()
+        webTestClient.get()
                 .uri("/public/test")
+                .header("X-Mock-Oidc-Token", tokenValue) // Instead of mutateWith()
                 .exchange()
                 .expectStatus()
                 .isOk();
 
-        // Then
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        // Used timeout so it fails immediately instead of hanging forever if routing breaks
+        RecordedRequest recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(recordedRequest).isNotNull();
         String relayedToken = recordedRequest.getHeaders().get(idTokenHeader);
         assertThat(relayedToken).isNull();
     }
 
-    @SuppressWarnings("MagicNumber")
     @Test
     void idTokenShouldBeRelayed() throws InterruptedException {
-        // Given
         String tokenValue = "test-id-token";
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
 
-        OidcIdToken idToken = new OidcIdToken(
-                tokenValue, Instant.now(), Instant.now().plusSeconds(60), Map.of("sub", "user")
-        );
-        OidcUser oidcUser = new DefaultOidcUser(Collections.emptyList(), idToken);
-
-        // When
-        webTestClient.mutateWith(mockOidcLogin().oidcUser(oidcUser))
-                .get()
+        webTestClient.get()
                 .uri("/api/test")
+                .header("X-Mock-Oidc-Token", tokenValue)
                 .exchange()
                 .expectStatus()
                 .isOk();
 
-        // Then
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        RecordedRequest recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(recordedRequest).isNotNull();
         String relayedToken = recordedRequest.getHeaders().get(idTokenHeader);
         assertThat(relayedToken).isEqualTo(tokenValue);
     }
 
     @Test
     void externalIdTokenShouldBeRemoved() throws InterruptedException {
-        // Given
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
         String externalToken = "some-token-from-outside";
 
-        // When
-        webTestClient.mutateWith(mockOidcLogin())
-                .get()
+        webTestClient.get()
                 .uri("/api/test")
+                .header("X-Mock-Oidc-Token", "dummy-internal-token")
                 .header(idTokenHeader, externalToken)
                 .exchange()
                 .expectStatus()
                 .isOk();
 
-        // Then
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        RecordedRequest recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(recordedRequest).isNotNull();
         String relayedToken = recordedRequest.getHeaders().get(idTokenHeader);
-        assertThat(relayedToken).isNotNull()
-                .isNotEqualTo(externalToken);
+        assertThat(relayedToken).isNotNull().isNotEqualTo(externalToken);
     }
 
     @Test
     void sessionCookieShouldBeRemovedAndOtherCookiesPreserved() throws InterruptedException {
-        // Given
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
         String otherCookieName = "test-cookie";
         String otherCookieValue = "test-value";
 
-        // When
-        webTestClient.mutateWith(mockOidcLogin())
-                .get()
+        webTestClient.get()
                 .uri("/api/test")
+                .header("X-Mock-Oidc-Token", "dummy-token")
                 .cookie(sessionCookieName, "some-session-value")
                 .cookie(otherCookieName, otherCookieValue)
                 .exchange()
                 .expectStatus()
                 .isOk();
 
-        // Then
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        RecordedRequest recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(recordedRequest).isNotNull();
         String cookieHeader = recordedRequest.getHeaders().get("Cookie");
         assertThat(cookieHeader)
                 .isNotNull()
@@ -182,36 +172,71 @@ class GatewayConfigTest {
 
     @Test
     void configuredHeadersShouldBeRemoved() throws InterruptedException {
-        // Given
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
 
-        // When
-        webTestClient.mutateWith(mockOidcLogin())
-                .get()
+        webTestClient.get()
                 .uri("/api/test")
+                .header("X-Mock-Oidc-Token", "dummy-token")
                 .header("Authorization", "Bearer token")
                 .header("X-XSRF-TOKEN", "csrf-token")
                 .exchange()
                 .expectStatus()
                 .isOk();
 
-        // Then
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        RecordedRequest recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(recordedRequest).isNotNull();
         for (String headerToRemove : headersToRemove) {
             assertThat(recordedRequest.getHeaders().get(headerToRemove)).isNull();
         }
     }
 
+    @SuppressWarnings("MethodWithMultipleLoops")
     @Test
-    @SuppressWarnings("PMD.UnitTestShouldIncludeAssert")
-    void configuredCookiesShouldBeRemoved() throws InterruptedException {
-        // Given
+    void configuredHeadersAndCookiesShouldBeRemovedCaseInsensitively() throws InterruptedException {
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
 
-        // When
-        webTestClient.mutateWith(mockOidcLogin())
-                .get()
+        // Sending headers and cookies with mixed/mangled casing
+        webTestClient.get()
                 .uri("/api/test")
+                .header("X-Mock-Oidc-Token", "dummy-token")
+                .header("aUtHoRiZaTiOn", "Bearer token")
+                .header("x-XsRf-ToKeN", "csrf-token")
+                .cookie("XsRf-ToKeN", "csrf-token-cookie")
+                .cookie("SLING.formauth", "form-auth-token")
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        RecordedRequest recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(recordedRequest).isNotNull();
+
+        // 1. Verify headers were removed regardless of the case sent
+        for (String headerToRemove : headersToRemove) {
+            // MockWebServer gives access to headers case-insensitively,
+            // so if it was relayed, it would be found here.
+            assertThat(recordedRequest.getHeaders().get(headerToRemove)).isNull();
+        }
+
+        // 2. Verify cookies were removed regardless of the case sent
+        Optional.ofNullable(recordedRequest.getHeaders().get("Cookie"))
+                .ifPresent(
+                        cookieHeader -> {
+                            for (String cookieToRemove : cookiesToRemove) {
+                                // Ensure the cookie string does not contain the target cookie
+                                // using a case-insensitive match
+                                assertThat(cookieHeader).doesNotContainIgnoringCase(cookieToRemove + "=");
+                            }
+                        }
+                );
+    }
+
+    @Test
+    void configuredCookiesShouldBeRemoved() throws InterruptedException {
+        mockWebServer.enqueue(new MockResponse().setBody("OK"));
+
+        webTestClient.get()
+                .uri("/api/test")
+                .header("X-Mock-Oidc-Token", "dummy-token")
                 .cookie("XSRF-TOKEN", "csrf-token")
                 .cookie("sling.formauth", "form-auth-token")
                 .cookie("sling.sudo", "sudo-token")
@@ -219,8 +244,8 @@ class GatewayConfigTest {
                 .expectStatus()
                 .isOk();
 
-        // Then
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        RecordedRequest recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(recordedRequest).isNotNull();
         Optional.ofNullable(recordedRequest.getHeaders().get("Cookie"))
                 .ifPresent(
                         cookieHeader -> {
@@ -233,24 +258,22 @@ class GatewayConfigTest {
 
     @Test
     void unauthenticatedRequestShouldNotHaveIdTokenHeader() {
-        // Given
         mockWebServer.enqueue(new MockResponse().setBody("OK"));
         int requestCountBefore = mockWebServer.getRequestCount();
-        // When - Note: No mockOidcLogin() here
+
+        // No header sent, so the @TestConfiguration won't mock a login
         webTestClient.get()
                 .uri("/api/test")
                 .exchange()
                 .expectStatus()
                 .is3xxRedirection(); // Redirects to /login
-        // Then
-        // Verify that the request did not reach the upstream server
+
         assertThat(mockWebServer.getRequestCount()).isEqualTo(requestCountBefore);
     }
 
     @SneakyThrows
     @Test
     void removeLocationHeader() {
-        // Given
         String loginPath = "/system/sling/form/login";
         mockWebServer.enqueue(
                 new MockResponse()
@@ -258,24 +281,20 @@ class GatewayConfigTest {
                         .addHeader("Location", loginPath)
         );
 
-        // When
-        webTestClient.mutateWith(mockOidcLogin())
-                .get()
+        webTestClient.get()
                 .uri("/api/test")
+                .header("X-Mock-Oidc-Token", "dummy-token")
                 .exchange()
                 .expectStatus().isFound()
                 .expectHeader().location("/login");
 
-        // Then
-        // Verify that a request was made to the upstream server
-        assertThat(mockWebServer.takeRequest()).isNotNull();
+        assertThat(mockWebServer.takeRequest(5, TimeUnit.SECONDS)).isNotNull();
     }
 
     @SneakyThrows
     @Test
     @SuppressWarnings({"TestMethodWithoutAssertion", "PMD.UnitTestShouldIncludeAssert"})
     void preserveLocationHeader() {
-        // Given
         String otherPath = "/some/other/path";
         mockWebServer.enqueue(
                 new MockResponse()
@@ -283,15 +302,41 @@ class GatewayConfigTest {
                         .addHeader("Location", otherPath)
         );
 
-        // When
-        webTestClient.mutateWith(mockOidcLogin())
-                .get()
+        webTestClient.get()
                 .uri("/api/test")
+                .header("X-Mock-Oidc-Token", "dummy-token")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().valueEquals("Location", otherPath);
 
-        // Then
-        mockWebServer.takeRequest();
+        mockWebServer.takeRequest(5, TimeUnit.SECONDS);
+    }
+
+    @SuppressWarnings("PackageVisibleInnerClass")
+    @TestConfiguration
+    static class MockSecurityConfig {
+        @Bean
+        @Order(Ordered.HIGHEST_PRECEDENCE)
+        public WebFilter mockOidcFilter() {
+            return (exchange, chain) -> Optional.ofNullable(
+                    exchange.getRequest().getHeaders().getFirst("X-Mock-Oidc-Token")
+            ).map(
+                    mockToken -> new OidcIdToken(
+                            mockToken, Instant.now(), Instant.now().plusSeconds(60), Map.of("sub", "user")
+                    )
+            ).map(
+                    idToken -> new DefaultOidcUser(Collections.emptyList(), idToken)
+            ).map(
+                    oidcUser -> new OAuth2AuthenticationToken(oidcUser, Collections.emptyList(), "google")
+            ).map(
+                    auth -> {
+                        ServerWebExchange mutatedExchange = exchange.mutate()
+                                .principal(Mono.just(auth))
+                                .build();
+                        return chain.filter(mutatedExchange)
+                                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
+                    }
+            ).orElse(chain.filter(exchange));
+        }
     }
 }

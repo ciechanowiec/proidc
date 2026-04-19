@@ -118,7 +118,6 @@ public class GatewayConfig {
         };
     }
 
-    @SuppressWarnings("PMD.LooseCoupling")
     private void addSlingLoginRedirectInterceptor(ServerWebExchange exchange) {
         exchange.getResponse().beforeCommit(
                 () -> {
@@ -155,7 +154,7 @@ public class GatewayConfig {
         String requestPath = requestToBeCleaned.getPath().pathWithinApplication().value();
         return requestToBeCleaned.mutate().headers(
                 headers -> {
-                    List<String> actualHeaderNamesToRemove = headers.keySet()
+                    List<String> actualHeaderNamesToRemove = headers.headerNames()
                             .stream()
                             .filter(
                                     actualHeaderName -> {

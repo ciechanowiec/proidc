@@ -229,19 +229,18 @@ public class SecurityConfig {
     /**
      * Creates a {@link ServerLogoutSuccessHandler} that notifies an upstream server about logout events.
      *
-     * @param repository       {@link ReactiveClientRegistrationRepository} for OIDC providers
-     * @param webClientBuilder {@link WebClient.Builder} for creating {@link WebClient} instances
+     * @param repository {@link ReactiveClientRegistrationRepository} for OIDC providers
      * @return {@link ServerLogoutSuccessHandler} that handles logout success events
      */
     @Bean
-    public ServerLogoutSuccessHandler logoutSuccessHandler(
-            ReactiveClientRegistrationRepository repository, WebClient.Builder webClientBuilder
-    ) {
+    public ServerLogoutSuccessHandler logoutSuccessHandler(ReactiveClientRegistrationRepository repository) {
         OidcClientInitiatedServerLogoutSuccessHandler oidcLogoutSuccessHandler =
                 new OidcClientInitiatedServerLogoutSuccessHandler(repository);
         oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}");
         HttpClient httpClient = HttpClient.create().followRedirect(false);
-        WebClient webClient = webClientBuilder.clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+
+        WebClient webClient = WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+
         return new UpstreamServerLogoutSuccessHandler(
                 webClient,
                 upstreamLogoutUrl,
