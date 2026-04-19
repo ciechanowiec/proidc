@@ -71,6 +71,6 @@ proidc:
   cookies_to_remove: ${COOKIES_TO_REMOVE:sling.formauth,sling.sudo,XSRF-TOKEN}
   strings_in_paths_to_block: ${STRINGS_IN_PATHS_TO_BLOCK:install,config,j_security_check}
   paths_to_block:
-    patterns: ${PATHS_TO_BLOCK_PATTERNS:/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**}
+    patterns: ${PATHS_TO_BLOCK_PATTERNS:/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**,/system/sling/oauth/entry-point*/**}
   paths_to_exclude:
     patterns: ${PATHS_TO_EXCLUDE_PATTERNS:}

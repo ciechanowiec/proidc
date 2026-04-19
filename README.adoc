@@ -411,7 +411,7 @@ The letter case is ignored when matching the `String`++s++.
 .. https://sling.apache.org/documentation/the-sling-engine/authentication/authentication-authenticationhandler/form-based-authenticationhandler.html[`j_security_check` `String`, to prevent initial form submissions^].
 
 |`PATHS_TO_BLOCK_PATTERNS`
-|`++/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**++`
+|`++/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**,/system/sling/oauth/entry-point*/**++`
 |See xref:#paths-to-block-patterns[] for details.
 
 |`PATHS_TO_EXCLUDE_PATTERNS`
@@ -450,6 +450,7 @@ To block all requests that are targeting a path that starts with some specific s
 ... https://sling.apache.org/documentation/bundles/rendering-content-default-get-servlets.html#slinginfoservlet[`/system/sling/info*/**`]
 ... https://github.com/apache/sling-org-apache-sling-auth-core/blob/60a1f92939b1f29ace8266560c0acdce7ee229db/src/main/java/org/apache/sling/auth/core/impl/LogoutServlet.java#L74[`/system/sling/logout*/**`]
 ... https://sling.apache.org/documentation/bundles/managing-users-and-groups-jackrabbit-usermanager.html[`/system/userManager*/**`]
+... https://github.com/apache/sling-org-apache-sling-auth-oauth-client/blob/9f068e918dc2caadb94842c272d0aa66d8d78549/src/main/java/org/apache/sling/auth/oauth_client/impl/OAuthEntryPointServlet.java#L60[`/system/sling/oauth/entry-point*/**`]
 
 [[paths-to-exclude-patterns]]
 === `PATHS_TO_EXCLUDE_PATTERNS`

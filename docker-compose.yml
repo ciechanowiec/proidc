@@ -19,7 +19,7 @@ services:
       HEADERS_TO_REMOVE: ${HEADERS_TO_REMOVE:-Authorization,XSRF-TOKEN}
       COOKIES_TO_REMOVE: ${COOKIES_TO_REMOVE:-sling.formauth,sling.sudo,XSRF-TOKEN}
       STRINGS_IN_PATHS_TO_BLOCK: ${STRINGS_IN_PATHS_TO_BLOCK:-install,config,j_security_check}
-      PATHS_TO_BLOCK_PATTERNS: ${PATHS_TO_BLOCK_PATTERNS:-/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**}
+      PATHS_TO_BLOCK_PATTERNS: ${PATHS_TO_BLOCK_PATTERNS:-/bin*/**,/bin/browser*/**,/bin/cpm*/**,/bin/packages*/**,/bin/public/clientlibs*/**,/bin/users*/**,/dav*/**,/libs*/**,/libs/sling/topology*/**,/server*/**,/system*/**,/system/console*/**,/system/health*/**,/system/sling/login*/**,/system/sling/form/login*/**,/system/sling/info*/**,/system/sling/logout*/**,/system/userManager*/**,/system/sling/oauth/entry-point*/**}
       PATHS_TO_EXCLUDE_PATTERNS: ${PATHS_TO_EXCLUDE_PATTERNS:-}
     image: ciechanowiec/proidc:1.6.0-SNAPSHOT
     container_name: proidc
