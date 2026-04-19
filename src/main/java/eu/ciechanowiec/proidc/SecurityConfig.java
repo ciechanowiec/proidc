@@ -68,7 +68,9 @@ public class SecurityConfig {
      * @param patternsOfPathsToExclude a {@link Collection} of {@link PathPattern} that should be excluded from
      *                                 authentication requirements
      */
-    @SuppressWarnings({"ParameterNumber", "ConstructorWithTooManyParameters", "PMD.ExcessiveParameterList"})
+    @SuppressWarnings(
+            {"ParameterNumber", "ConstructorWithTooManyParameters", "PMD.ExcessiveParameterList", "squid:S3599"}
+    )
     SecurityConfig(
             @Value("${proidc.upstream_logout_uri}") String upstreamLogoutUrl,
             @Value("${proidc.id_token.header_name}") String idTokenHeaderName,
@@ -99,23 +101,7 @@ public class SecurityConfig {
     public SecurityWebFilterChain restrictedPathsDenyFilterChain(ServerHttpSecurity http) {
         ServerRedirectStrategy redirectStrategy = new DefaultServerRedirectStrategy();
         URI redirectUri = URI.create("/");
-        ServerWebExchangeMatcher blockedStringsMatcher = exchange -> {
-            String path = exchange.getRequest().getURI().getPath().toLowerCase(Locale.getDefault());
-            boolean isBlocked = stringsInPathsToBlock.stream()
-                    .anyMatch(path::contains);
-            return isBlocked
-                    ? ServerWebExchangeMatcher.MatchResult.match()
-                    : ServerWebExchangeMatcher.MatchResult.notMatch();
-        };
-        ServerWebExchangeMatcher pathMatcher = ServerWebExchangeMatchers.pathMatchers(
-                patternsOfPathsToBlock.toArray(String[]::new)
-        );
-        ServerWebExchangeMatcher combinedMatcher = exchange -> pathMatcher.matches(exchange)
-                .flatMap(
-                        result -> result.isMatch()
-                                ? Mono.just(result)
-                                : blockedStringsMatcher.matches(exchange)
-                );
+        ServerWebExchangeMatcher combinedMatcher = combinedMatcher();
         return http.securityMatcher(combinedMatcher)
                 .authorizeExchange(exchange -> exchange.anyExchange().denyAll())
                 .exceptionHandling(
@@ -129,6 +115,26 @@ public class SecurityConfig {
                 )
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .build();
+    }
+
+    private ServerWebExchangeMatcher combinedMatcher() {
+        ServerWebExchangeMatcher blockedStringsMatcher = exchange -> {
+            String path = exchange.getRequest().getURI().getPath().toLowerCase(Locale.getDefault());
+            boolean isBlocked = stringsInPathsToBlock.stream()
+                    .anyMatch(path::contains);
+            return isBlocked
+                    ? ServerWebExchangeMatcher.MatchResult.match()
+                    : ServerWebExchangeMatcher.MatchResult.notMatch();
+        };
+        ServerWebExchangeMatcher pathMatcher = ServerWebExchangeMatchers.pathMatchers(
+                patternsOfPathsToBlock.toArray(String[]::new)
+        );
+        return exchange -> pathMatcher.matches(exchange)
+                .flatMap(
+                        result -> result.isMatch()
+                                ? Mono.just(result)
+                                : blockedStringsMatcher.matches(exchange)
+                );
     }
 
     /**
@@ -146,11 +152,11 @@ public class SecurityConfig {
                 .authorizeExchange(exchange -> exchange.anyExchange().denyAll())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(
-                                (exchange, authenticationException)
+                                (exchange, _)
                                         -> redirectStrategy.sendRedirect(exchange, redirectUri)
                         )
                         .accessDeniedHandler(
-                                (exchange, authenticationException)
+                                (exchange, _)
                                         -> redirectStrategy.sendRedirect(exchange, redirectUri)
                         )
                 ).build();

@@ -8,9 +8,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
@@ -55,7 +56,7 @@ class SecurityConfigTest {
                 .uri("/any-path")
                 .exchange()
                 .expectStatus().is3xxRedirection()
-                .expectHeader().value("Location", location ->
+                .expectHeader().value(HttpHeaders.LOCATION, location ->
                         assertThat(location).matches("/login")
                 );
     }
@@ -67,7 +68,7 @@ class SecurityConfigTest {
                 .uri("/logout")
                 .exchange()
                 .expectStatus().is3xxRedirection()
-                .expectHeader().value("Location", location ->
+                .expectHeader().value(HttpHeaders.LOCATION, location ->
                         assertThat(location).matches("/")
                 );
     }
@@ -83,7 +84,7 @@ class SecurityConfigTest {
                 .uri(pathToTest)
                 .exchange()
                 .expectStatus().is3xxRedirection()
-                .expectHeader().value("Location", location ->
+                .expectHeader().value(HttpHeaders.LOCATION, location ->
                         assertThat(location).matches("/")
                 );
     }
@@ -158,7 +159,7 @@ class SecurityConfigTest {
                     .uri(path)
                     .exchange()
                     .expectStatus().is3xxRedirection()
-                    .expectHeader().value("Location", location ->
+                    .expectHeader().value(HttpHeaders.LOCATION, location ->
                             assertThat(location).isEqualTo("/")
                     );
         }
@@ -172,7 +173,7 @@ class SecurityConfigTest {
                     .uri("/allowed-path")
                     .exchange()
                     .expectStatus().is3xxRedirection()
-                    .expectHeader().value("Location", location ->
+                    .expectHeader().value(HttpHeaders.LOCATION, location ->
                             assertThat(location).isEqualTo("/login")
                     );
         }
@@ -186,7 +187,7 @@ class SecurityConfigTest {
                     .uri("/some/install/path")
                     .exchange()
                     .expectStatus().is3xxRedirection()
-                    .expectHeader().value("Location", location ->
+                    .expectHeader().value(HttpHeaders.LOCATION, location ->
                             assertThat(location).isEqualTo("/")
                     );
         }
@@ -199,7 +200,7 @@ class SecurityConfigTest {
                     .uri("/allowed-path?param=install")
                     .exchange()
                     .expectStatus().is3xxRedirection()
-                    .expectHeader().value("Location", location ->
+                    .expectHeader().value(HttpHeaders.LOCATION, location ->
                             assertThat(location).isEqualTo("/login")
                     );
         }
@@ -211,7 +212,7 @@ class SecurityConfigTest {
                     .uri("/path/containing/INSTALL/and/Config")
                     .exchange()
                     .expectStatus().is3xxRedirection()
-                    .expectHeader().value("Location", location ->
+                    .expectHeader().value(HttpHeaders.LOCATION, location ->
                             assertThat(location).isEqualTo("/")
                     );
         }
@@ -226,7 +227,7 @@ class SecurityConfigTest {
                     .uri("/public/install/resource")
                     .exchange()
                     .expectStatus().is3xxRedirection()
-                    .expectHeader().value("Location", location ->
+                    .expectHeader().value(HttpHeaders.LOCATION, location ->
                             assertThat(location).isEqualTo("/")
                     );
         }
@@ -245,7 +246,7 @@ class SecurityConfigTest {
                     .uri(path)
                     .exchange()
                     .expectStatus().is3xxRedirection()
-                    .expectHeader().value("Location", location ->
+                    .expectHeader().value(HttpHeaders.LOCATION, location ->
                             assertThat(location).isEqualTo("/login")
                     );
         }
