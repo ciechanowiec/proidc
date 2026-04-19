@@ -24,7 +24,7 @@ public class Main {
      *
      * @param args command line arguments passed to the application
      */
-    public static void main(String[] args) {
+    static void main(String... args) {
         SpringApplication.run(Main.class, args);
     }
 }

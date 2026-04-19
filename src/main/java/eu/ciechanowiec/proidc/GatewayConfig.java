@@ -21,7 +21,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Configuration class for the Spring Cloud Gateway that handles request relay and security.
@@ -32,8 +31,9 @@ import java.util.stream.Stream;
 public class GatewayConfig {
 
     private final String idTokenHeaderName;
-    private final Set<String> allHeadersToRemoveLowerCase;
-    private final Set<String> allCookiesToRemoveLowerCase;
+    private final Set<String> allHeadersToRemove;
+    private final Set<String> allCookiesToRemove;
+
     private final Collection<PathPattern> patternsOfPathsToExclude;
 
     /**
@@ -48,7 +48,9 @@ public class GatewayConfig {
      * @param patternsOfPathsToExclude a {@link Collection} of path patterns that should be excluded from
      *                                 authentication requirements
      */
-    @SuppressWarnings({"ParameterNumber", "PMD.ExcessiveParameterList"})
+    @SuppressWarnings(
+            {"ParameterNumber", "PMD.ExcessiveParameterList", "squid:S3599", "ConstructorWithTooManyParameters"}
+    )
     public GatewayConfig(
             @Value("${proidc.id_token.header_name}") String idTokenHeaderName,
             @Value("${server.reactive.session.cookie.name:SESSION}") String sessionCookieName,
@@ -57,12 +59,19 @@ public class GatewayConfig {
             @Value("${proidc.paths_to_exclude.patterns:}") Collection<String> patternsOfPathsToExclude
     ) {
         this.idTokenHeaderName = idTokenHeaderName;
-        this.allHeadersToRemoveLowerCase = Stream.concat(headersToRemove.stream(), Stream.of(idTokenHeaderName))
-                .map(headerToRemove -> headerToRemove.toLowerCase(Locale.getDefault()))
-                .collect(Collectors.toUnmodifiableSet());
-        this.allCookiesToRemoveLowerCase = Stream.concat(cookiesToRemove.stream(), Stream.of(sessionCookieName))
-                .map(cookieToRemove -> cookieToRemove.toLowerCase(Locale.getDefault()))
-                .collect(Collectors.toUnmodifiableSet());
+        // Initialize case-insensitive sets once
+        this.allHeadersToRemove = Collections.unmodifiableSet(
+                new TreeSet<>(String.CASE_INSENSITIVE_ORDER) {{
+                    addAll(headersToRemove);
+                    add(idTokenHeaderName);
+                }}
+        );
+        this.allCookiesToRemove = Collections.unmodifiableSet(
+                new TreeSet<>(String.CASE_INSENSITIVE_ORDER) {{
+                    addAll(cookiesToRemove);
+                    add(sessionCookieName);
+                }}
+        );
         PathPatternParser parser = new PathPatternParser();
         this.patternsOfPathsToExclude = patternsOfPathsToExclude.stream()
                 .map(parser::parse)
@@ -82,9 +91,7 @@ public class GatewayConfig {
             ServerHttpRequest requestOriginal = exchange.getRequest();
             String requestPath = requestOriginal.getPath().pathWithinApplication().value();
             log.trace("{} started execution for '{}'", this, requestPath);
-            ServerHttpRequest requestCleaned = removeSensitiveHeadersAndCookies(
-                    requestOriginal
-            );
+            ServerHttpRequest requestCleaned = removeSensitiveHeadersAndCookies(requestOriginal);
 
             PathContainer actualRequestPath = requestOriginal.getPath().pathWithinApplication();
             boolean isExcludedFromAuthReqs = patternsOfPathsToExclude.stream()
@@ -99,7 +106,7 @@ public class GatewayConfig {
 
             return exchange.getPrincipal()
                     .ofType(OAuth2AuthenticationToken.class)
-                    .map(OAuth2AuthenticationToken::getPrincipal)
+                    .flatMap(auth -> Mono.justOrEmpty(auth.getPrincipal()))
                     .ofType(OidcUser.class)
                     .map(OidcUser::getIdToken)
                     .map(OidcIdToken::getTokenValue)
@@ -114,7 +121,7 @@ public class GatewayConfig {
                     ).defaultIfEmpty(exchange.mutate().request(requestCleaned).build())
                     .doOnSuccess(this::addSlingLoginRedirectInterceptor)
                     .flatMap(chain::filter)
-                    .doOnSuccess(voidObject -> log.trace("{} finished execution", this));
+                    .doOnSuccess(_ -> log.trace("{} finished execution for {}", this, requestPath));
         };
     }
 
@@ -130,10 +137,7 @@ public class GatewayConfig {
                             .findAny()
                             .ifPresent(
                                     location -> {
-                                        log.trace(
-                                                "Removing location header with value: '{}'",
-                                                location
-                                        );
+                                        log.trace("Removing location header with value: '{}'", location);
                                         headers.remove(HttpHeaders.LOCATION);
                                         headers.set(HttpHeaders.LOCATION, "/login");
                                         response.setStatusCode(HttpStatus.FOUND);
@@ -158,15 +162,10 @@ public class GatewayConfig {
                             .stream()
                             .filter(
                                     actualHeaderName -> {
-                                        String actualHeaderNameLoweCase = actualHeaderName.toLowerCase(
-                                                Locale.getDefault()
-                                        );
-                                        boolean shouldDrop = allHeadersToRemoveLowerCase.contains(
-                                                actualHeaderNameLoweCase
-                                        );
+                                        boolean shouldDrop = allHeadersToRemove.contains(actualHeaderName);
                                         log.trace(
                                                 "Should header '{}' be dropped for request path '{}'? Answer: {}",
-                                                actualHeaderNameLoweCase, requestPath, shouldDrop
+                                                actualHeaderName, requestPath, shouldDrop
                                         );
                                         return shouldDrop;
                                     }
@@ -197,11 +196,10 @@ public class GatewayConfig {
                         .flatMap(List::stream)
                         .filter(
                                 cookie -> {
-                                    String cookieNameLowerCase = cookie.getName().toLowerCase(Locale.getDefault());
-                                    boolean shouldKeep = !allCookiesToRemoveLowerCase.contains(cookieNameLowerCase);
+                                    boolean shouldKeep = !allCookiesToRemove.contains(cookie.getName());
                                     log.trace(
                                             "Should cookie '{}' be kept for request path '{}'? Answer: {}",
-                                            cookieNameLowerCase, requestPath, shouldKeep
+                                            cookie.getName(), requestPath, shouldKeep
                                     );
                                     return shouldKeep;
                                 }
