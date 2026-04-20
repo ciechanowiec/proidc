@@ -180,7 +180,7 @@ To perform a state-changing operation, the client application must first acquire
 }
 ----
 +
-The browser will automatically manage the `XSRF-TOKEN` cookie. The client application is responsible for extracting and retaining the `token` value from the JSON response body for subsequent use.
+The browser will automatically manage the `XSRF-TOKEN` cookie. The client application is responsible for extracting and retaining the `token` value from the JSON response body for subsequent use. The `token` is valid as long as the xref:#oidc-authentication[`SESSION` cookie] is valid and can be reused, hence there is no need to refetch it on every request.
 
 . *PHASE 2: Protected Request Submission and Validation*
 [upperroman]
